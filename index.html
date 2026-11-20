@@ -11,7 +11,8 @@
     :root {
       --bg: #f8f9fa;
       --card: #ffffff;
-      --text: #1a1c1e;
+      --sub-card: #f1f5f9;
+      --text: #1e293b;
       --muted: #64748b;
       --accent: #0f766e;
       --accent-soft: #f0fdfa;
@@ -21,7 +22,8 @@
       :root {
         --bg: #0f1115;
         --card: #181b20;
-        --text: #f1f5f9;
+        --sub-card: #21262e;
+        --text: #e2e8f0;
         --muted: #94a3b8;
         --accent: #2dd4bf;
         --accent-soft: #132a28;
@@ -33,7 +35,8 @@
       font-family: -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif;
       background: var(--bg);
       color: var(--text);
-      line-height: 1.65;
+      line-height: 1.75;
+      word-break: keep-all;
       padding: 24px 16px 64px;
     }
     .container { max-width: 720px; margin: 0 auto; }
@@ -45,27 +48,49 @@
     header span { font-size: 0.85rem; color: var(--muted); }
     .card {
       background: var(--card); border: 1px solid var(--border);
-      border-radius: 16px; padding: 24px; margin-bottom: 24px;
+      border-radius: 16px; padding: 26px 24px; margin-bottom: 24px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.03);
     }
     .badge-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
     .badge {
       background: var(--accent-soft); color: var(--accent);
-      font-size: 0.78rem; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+      font-size: 0.78rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;
     }
     .journal { font-size: 0.82rem; color: var(--muted); font-weight: 500; }
-    .ko-title { font-size: 1.3rem; font-weight: 700; line-height: 1.4; margin-bottom: 6px; }
-    .en-title { font-size: 0.88rem; color: var(--muted); margin-bottom: 16px; }
+    .ko-title { font-size: 1.35rem; font-weight: 700; line-height: 1.4; margin-bottom: 6px; letter-spacing: -0.01em; }
+    .en-title { font-size: 0.85rem; color: var(--muted); margin-bottom: 18px; line-height: 1.45; }
     .one-line {
-      background: var(--accent-soft); border-left: 3px solid var(--accent);
-      padding: 12px 14px; border-radius: 8px; font-weight: 600; font-size: 0.95rem;
-      margin-bottom: 20px;
+      background: var(--accent-soft); border-left: 4px solid var(--accent);
+      padding: 14px 16px; border-radius: 8px; font-weight: 600; font-size: 0.96rem;
+      margin-bottom: 24px;
     }
-    .section { margin-bottom: 14px; }
-    .section h3 { font-size: 0.82rem; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
-    .section p { font-size: 0.95rem; }
+    .section { margin-bottom: 22px; }
+    .section h3 {
+      font-size: 0.92rem; color: var(--accent); margin-bottom: 6px; font-weight: 700;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .section p { font-size: 0.96rem; }
+    .takeaway-list { padding-left: 18px; font-size: 0.96rem; }
+    .takeaway-list li { margin-bottom: 8px; }
+    .concepts-box {
+      margin-top: 24px;
+      padding: 18px;
+      background: var(--sub-card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .concepts-box h3 {
+      font-size: 0.9rem;
+      color: var(--accent);
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+    .concept-item { margin-bottom: 14px; }
+    .concept-item:last-child { margin-bottom: 0; }
+    .concept-term { font-weight: 700; font-size: 0.93rem; margin-bottom: 3px; }
+    .concept-desc { font-size: 0.9rem; opacity: 0.92; line-height: 1.65; }
     .pubmed-link {
-      display: inline-block; margin-top: 12px; font-size: 0.85rem;
+      display: inline-block; margin-top: 20px; font-size: 0.85rem;
       color: var(--accent); text-decoration: none; font-weight: 600;
     }
     .archive-header {
@@ -114,6 +139,43 @@
         return;
       }
       document.getElementById('today-date').textContent = paper.date;
+
+      const conceptsHtml = (paper.key_concepts && paper.key_concepts.length > 0)
+        ? `
+          <div class="concepts-box">
+            <h3>📖 함께 알아둘 핵심 의학 용어</h3>
+            ${paper.key_concepts.map(c => `
+              <div class="concept-item">
+                <div class="concept-term">• ${c.term}</div>
+                <div class="concept-desc">${c.explanation}</div>
+              </div>
+            `).join('')}
+          </div>
+        `
+        : '';
+
+      // 새 포맷(스토리텔링형)과 기존 포맷 모두 호환 렌더링
+      let bodyHtml = '';
+      if (paper.disease_background) {
+        const takeaways = Array.isArray(paper.study_takeaway)
+          ? `<ul class="takeaway-list">${paper.study_takeaway.map(t => `<li>${t}</li>`).join('')}</ul>`
+          : `<p>${paper.study_takeaway || ''}</p>`;
+
+        bodyHtml = `
+          <div class="section"><h3>🩺 먼저 알아야 할 질환 이야기</h3><p>${paper.disease_background}</p></div>
+          <div class="section"><h3>🧬 핵심 타겟과 작용 원리</h3><p>${paper.key_mechanism}</p></div>
+          <div class="section"><h3>📌 이번 연구에서 확인된 핵심</h3>${takeaways}</div>
+          <div class="section"><h3>🏥 진료실 적용 포인트</h3><p>${paper.clinical_point}</p></div>
+        `;
+      } else {
+        bodyHtml = `
+          <div class="section"><h3>배경 및 목적</h3><p>${paper.background}</p></div>
+          <div class="section"><h3>연구 방법</h3><p>${paper.methods}</p></div>
+          <div class="section"><h3>핵심 결과</h3><p>${paper.results}</p></div>
+          <div class="section"><h3>임상적 의의 및 한계</h3><p>${paper.clinical_implication}</p></div>
+        `;
+      }
+
       container.innerHTML = `
         <article class="card">
           <div class="badge-row">
@@ -123,10 +185,8 @@
           <h2 class="ko-title">${paper.ko_title}</h2>
           <p class="en-title">${paper.original_title}</p>
           <div class="one-line">💡 ${paper.one_line}</div>
-          <div class="section"><h3>배경 및 목적</h3><p>${paper.background}</p></div>
-          <div class="section"><h3>연구 방법</h3><p>${paper.methods}</p></div>
-          <div class="section"><h3>핵심 결과</h3><p>${paper.results}</p></div>
-          <div class="section"><h3>임상적 의의 및 한계</h3><p>${paper.clinical_implication}</p></div>
+          ${bodyHtml}
+          ${conceptsHtml}
           <a class="pubmed-link" href="${paper.url}" target="_blank" rel="noopener">PubMed 원문 보기 (PMID: ${paper.pmid}) →</a>
         </article>
       `;
