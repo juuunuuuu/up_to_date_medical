@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="MedBrief" />
+  <title>Daily MedBrief</title>
+  <style>
+    :root {
+      --bg: #f8f9fa;
+      --card: #ffffff;
+      --text: #1a1c1e;
+      --muted: #64748b;
+      --accent: #0f766e;
+      --accent-soft: #f0fdfa;
+      --border: #e2e8f0;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1115;
+        --card: #181b20;
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+        --accent: #2dd4bf;
+        --accent-soft: #132a28;
+        --border: #2a2f38;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      padding: 24px 16px 64px;
+    }
+    .container { max-width: 720px; margin: 0 auto; }
+    header {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+    }
+    header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; }
+    header span { font-size: 0.85rem; color: var(--muted); }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 24px; margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .badge-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+    .badge {
+      background: var(--accent-soft); color: var(--accent);
+      font-size: 0.78rem; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+    }
+    .journal { font-size: 0.82rem; color: var(--muted); font-weight: 500; }
+    .ko-title { font-size: 1.3rem; font-weight: 700; line-height: 1.4; margin-bottom: 6px; }
+    .en-title { font-size: 0.88rem; color: var(--muted); margin-bottom: 16px; }
+    .one-line {
+      background: var(--accent-soft); border-left: 3px solid var(--accent);
+      padding: 12px 14px; border-radius: 8px; font-weight: 600; font-size: 0.95rem;
+      margin-bottom: 20px;
+    }
+    .section { margin-bottom: 14px; }
+    .section h3 { font-size: 0.82rem; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+    .section p { font-size: 0.95rem; }
+    .pubmed-link {
+      display: inline-block; margin-top: 12px; font-size: 0.85rem;
+      color: var(--accent); text-decoration: none; font-weight: 600;
+    }
+    .archive-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin: 32px 0 14px; gap: 12px;
+    }
+    .archive-header h2 { font-size: 1.05rem; }
+    input[type="search"] {
+      padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--card); color: var(--text); font-size: 0.88rem; width: 200px;
+    }
+    .archive-item {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px 16px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.15s;
+    }
+    .archive-item:hover { border-color: var(--accent); }
+    .archive-item .meta { font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
+    .archive-item .title { font-size: 0.95rem; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Daily MedBrief</h1>
+      <span id="today-date"></span>
+    </header>
+
+    <main id="featured-paper">
+      <div class="card">데이터를 불러오는 중입니다...</div>
+    </main>
+
+    <div class="archive-header">
+      <h2>이전 브리핑 아카이브</h2>
+      <input type="search" id="search-input" placeholder="키워드·분과 검색..." />
+    </div>
+    <div id="archive-list"></div>
+  </div>
+
+  <script>
+    let allPapers = [];
+
+    function renderFeatured(paper) {
+      const container = document.getElementById('featured-paper');
+      if (!paper) {
+        container.innerHTML = `<div class="card">아직 수집된 논문이 없습니다. GitHub Actions를 실행해 첫 논문을 가져와 주세요.</div>`;
+        return;
+      }
+      document.getElementById('today-date').textContent = paper.date;
+      container.innerHTML = `
+        <article class="card">
+          <div class="badge-row">
+            <span class="badge">${paper.category}</span>
+            <span class="journal">${paper.journal}</span>
+          </div>
+          <h2 class="ko-title">${paper.ko_title}</h2>
+          <p class="en-title">${paper.original_title}</p>
+          <div class="one-line">💡 ${paper.one_line}</div>
+          <div class="section"><h3>배경 및 목적</h3><p>${paper.background}</p></div>
+          <div class="section"><h3>연구 방법</h3><p>${paper.methods}</p></div>
+          <div class="section"><h3>핵심 결과</h3><p>${paper.results}</p></div>
+          <div class="section"><h3>임상적 의의 및 한계</h3><p>${paper.clinical_implication}</p></div>
+          <a class="pubmed-link" href="${paper.url}" target="_blank" rel="noopener">PubMed 원문 보기 (PMID: ${paper.pmid}) →</a>
+        </article>
+      `;
+    }
+
+    function renderArchive(papers) {
+      const list = document.getElementById('archive-list');
+      list.innerHTML = papers.map((p, idx) => `
+        <div class="archive-item" onclick="selectPaper(${idx})">
+          <div class="meta">${p.date} · ${p.category} · ${p.journal}</div>
+          <div class="title">${p.ko_title}</div>
+        </div>
+      `).join('');
+    }
+
+    function selectPaper(index) {
+      renderFeatured(allPapers[index]);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    document.getElementById('search-input').addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();
+      const filtered = allPapers.filter(p =>
+        p.ko_title.toLowerCase().includes(q) ||
+        p.original_title.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
+        p.journal.toLowerCase().includes(q)
+      );
+      renderArchive(filtered);
+    });
+
+    fetch('./data/papers.json?t=' + Date.now())
+      .then(res => res.json())
+      .then(data => {
+        allPapers = data;
+        renderFeatured(allPapers[0]);
+        renderArchive(allPapers);
+      })
+      .catch(() => renderFeatured(null));
+  </script>
+</body>
+</html>
