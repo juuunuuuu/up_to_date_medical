@@ -1,6 +1,34 @@
 [
   {
     "date": "2026-11-20",
+    "pmid": "43056654",
+    "original_title": "Efficacy and Safety of 2 Rimegepant Dosing Regimens for the Prevention of Episodic Migraine: A Randomized Controlled Study.",
+    "journal": "Neurology",
+    "url": "https://pubmed.ncbi.nlm.nih.gov/43056654/",
+    "ko_title": "삽화성 편두통 예방을 위한 리메게판트 1일 1회 및 격일 투여 요법의 효능과 안전성을 입증한 4상 무작위 대조시험",
+    "category": "신경과",
+    "one_line": "경구 CGRP 수용체 길항제인 리메게판트는 격일 투여뿐만 아니라 1일 1회 투여 시에도 위약 대비 월 편두통 발생 일수를 유의하게 감소시키며 우수한 내약성을 보였다.",
+    "background": "기존의 편두통 예방 약제들은 부작용, 금기증, 불충분한 효과 등으로 인해 임상 현장에서 순응도가 낮다는 한계가 있었습니다. 소분자 경구 칼시토닌 유전자 관련 펩타이드(CGRP) 수용체 길항제인 리메게판트는 급성기 치료 및 격일 예방 요법으로 허가되었으나, 투여 용법에 따른 예방 효과를 체계적으로 평가한 대규모 연구는 제한적이었습니다.",
+    "methods": "10개국 외래 기관에서 월 4~14회 편두통 발작을 경험하는 성인 삽화성 편두통 환자 692명을 대상으로 12주간 다국가, 무작위 배정, 이중맹검, 위약 대조 4상 임상시험을 진행했습니다. 환자들을 위약군(n=231), 리메게판트 75mg 격일 투여군(n=232), 리메게판트 75mg 1일 1회 투여군(n=229)으로 무작위 배정하여 12주간 치료했습니다. 1차 평가변수는 관찰기 대비 12주간의 월평균 편두통 일수(monthly migraine days, MMD) 변화량이었습니다.",
+    "results": "12주간 위약군 대비 월평균 편두통 일수는 격일 투여군에서 0.6일 더 감소(최소제곱평균 차이 -0.6일, 97.5% CI -1.22 ~ -0.01, p=0.0220), 1일 1회 투여군에서 1.8일 더 감소(차이 -1.8일, 97.5% CI -2.35 ~ -1.19, p<0.0001)하여 두 군 모두 1차 평가변수를 충족했습니다. 특히 1일 1회 투여군은 모든 주요 2차 평가변수에서도 위약 대비 유의한 개선(모두 p<0.0001)을 달성했습니다. 약물 관련 이상반응은 대부분 경증 또는 중등도 수준이었으며 우수한 안전성 프로파일을 확인했습니다.",
+    "clinical_implication": "본 연구는 리메게판트 75mg 매일 투여 및 격일 투여 요법 모두 편두통 예방에 효과적이고 안전함을 입증하는 Class I 근거를 제공하여 향후 진료 지침 및 맞춤형 처방 선택지를 넓혔습니다. 다만 본 시험 설계가 격일 투여군과 매일 투여군 간의 직접적인 우열을 통계적으로 비교하도록 설계되지는 않았다는 점을 고려해야 합니다.",
+    "key_concepts": [
+      {
+        "term": "칼시토닌 유전자 관련 펩타이드 (Calcitonin Gene-Related Peptide, CGRP)",
+        "explanation": "삼차신경절 뉴런에서 주로 분비되는 강력한 신경펩타이드로, 편두통의 핵심 병태생리를 매개합니다. 발작 시 삼차신경-혈관 복합체(trigeminovascular complex)에서 분비되어 뇌경막 혈관 확장, 신경인성 염증(neurogenic inflammation), 혈장 단백 누출을 유발합니다. 또한 중추신경계로 통각 신호 전달을 증폭시켜 두통을 만성화시키는 핵심 인자로 작용합니다."
+      },
+      {
+        "term": "게판트 계열 약제 (Gepants)",
+        "explanation": "CGRP 수용체에 선택적이고 경쟁적으로 결합하여 CGRP가 매개하는 혈관 확장과 통각 전도를 차단하는 저분자 경구 길항제(small-molecule antagonist)입니다. 기존 트립탄(triptan) 계열과 달리 세로토닌 5-HT1B/1D 수용체를 자극하지 않아 직접적인 혈관 수축을 유발하지 않으므로 심혈관 질환 위험이 있는 환자에게도 비교적 안전하게 투여할 수 있습니다. 경구 투여가 가능하여 주사형 단클론항체(CGRP mAb)에 비해 환자 순응도와 복약 편의성이 높습니다."
+      },
+      {
+        "term": "삽화성 편두통 (Episodic Migraine)",
+        "explanation": "월 두통 발생 일수가 15일 미만인 경우로 정의되며, 맥박성 박동감, 편측성 국소화, 중등도 이상의 통증 강도를 특징으로 하는 원발성 두통 질환입니다. 오심, 구토, 빛 공포증(photophobia), 소리 공포증(phonophobia) 등의 자율신경계 및 감각 과민 증상이 흔히 동반됩니다. 적절한 예방 치료를 받지 못할 경우 중추 감작(central sensitization)이 진행되어 월 15일 이상 통증이 지속되는 만성 편두통(chronic migraine)으로 악화될 수 있습니다."
+      }
+    ]
+  },
+  {
+    "date": "2026-11-20",
     "pmid": "43056663",
     "original_title": "Risk of Idiopathic Intracranial Hypertension Following Anemia in Young Adults: A Retrospective Cohort TriNetX Database Study.",
     "journal": "Neurology",
