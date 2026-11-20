@@ -1,167 +1,231 @@
-import json
-import os
-import urllib.request
-import urllib.parse
-import xml.etree.ElementTree as ET
-from datetime import datetime
-from google import genai
-from google.genai import types
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="MedBrief" />
+  <title>Daily MedBrief</title>
+  <style>
+    :root {
+      --bg: #f8f9fa;
+      --card: #ffffff;
+      --sub-card: #f1f5f9;
+      --text: #1e293b;
+      --muted: #64748b;
+      --accent: #0f766e;
+      --accent-soft: #f0fdfa;
+      --border: #e2e8f0;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1115;
+        --card: #181b20;
+        --sub-card: #21262e;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #2dd4bf;
+        --accent-soft: #132a28;
+        --border: #2a2f38;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.75;
+      word-break: keep-all;
+      padding: 24px 16px 64px;
+    }
+    .container { max-width: 720px; margin: 0 auto; }
+    header {
+      display: flex; justify-content: space-between; align-items: baseline;
+      margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+    }
+    header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; }
+    header span { font-size: 0.85rem; color: var(--muted); }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 16px; padding: 26px 24px; margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .badge-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+    .badge {
+      background: var(--accent-soft); color: var(--accent);
+      font-size: 0.78rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+    }
+    .journal { font-size: 0.82rem; color: var(--muted); font-weight: 500; }
+    .ko-title { font-size: 1.35rem; font-weight: 700; line-height: 1.4; margin-bottom: 6px; letter-spacing: -0.01em; }
+    .en-title { font-size: 0.85rem; color: var(--muted); margin-bottom: 18px; line-height: 1.45; }
+    .one-line {
+      background: var(--accent-soft); border-left: 4px solid var(--accent);
+      padding: 14px 16px; border-radius: 8px; font-weight: 600; font-size: 0.96rem;
+      margin-bottom: 24px;
+    }
+    .section { margin-bottom: 22px; }
+    .section h3 {
+      font-size: 0.92rem; color: var(--accent); margin-bottom: 6px; font-weight: 700;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .section p { font-size: 0.96rem; }
+    .takeaway-list { padding-left: 18px; font-size: 0.96rem; }
+    .takeaway-list li { margin-bottom: 8px; }
+    .concepts-box {
+      margin-top: 24px;
+      padding: 18px;
+      background: var(--sub-card);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .concepts-box h3 {
+      font-size: 0.9rem;
+      color: var(--accent);
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+    .concept-item { margin-bottom: 14px; }
+    .concept-item:last-child { margin-bottom: 0; }
+    .concept-term { font-weight: 700; font-size: 0.93rem; margin-bottom: 3px; }
+    .concept-desc { font-size: 0.9rem; opacity: 0.92; line-height: 1.65; }
+    .pubmed-link {
+      display: inline-block; margin-top: 20px; font-size: 0.85rem;
+      color: var(--accent); text-decoration: none; font-weight: 600;
+    }
+    .archive-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin: 32px 0 14px; gap: 12px;
+    }
+    .archive-header h2 { font-size: 1.05rem; }
+    input[type="search"] {
+      padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--card); color: var(--text); font-size: 0.88rem; width: 200px;
+    }
+    .archive-item {
+      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px 16px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.15s;
+    }
+    .archive-item:hover { border-color: var(--accent); }
+    .archive-item .meta { font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
+    .archive-item .title { font-size: 0.95rem; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Daily MedBrief</h1>
+      <span id="today-date"></span>
+    </header>
 
-# 주요 의학 저널 + 단순 코멘트/사설 제외 필터
-PUBMED_QUERY = (
-    '("New England Journal of Medicine"[Journal] OR "Lancet"[Journal] OR '
-    '"JAMA"[Journal] OR "Nature medicine"[Journal] OR "BMJ"[Journal] OR '
-    '"Annals of internal medicine"[Journal] OR "Neurology"[Journal] OR "Circulation"[Journal]) '
-    'AND hasabstract[text] '
-    'NOT ("Letter"[pt] OR "Editorial"[pt] OR "Comment"[pt] OR "Published Erratum"[pt])'
-)
-DATA_FILE = "data/papers.json"
+    <main id="featured-paper">
+      <div class="card">데이터를 불러오는 중입니다...</div>
+    </main>
 
+    <div class="archive-header">
+      <h2>이전 브리핑 아카이브</h2>
+      <input type="search" id="search-input" placeholder="키워드·분과 검색..." />
+    </div>
+    <div id="archive-list"></div>
+  </div>
 
-def get_recent_pmids(query: str, retmax: int = 25) -> list[str]:
-    encoded_query = urllib.parse.quote(query)
-    url = (
-        f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?"
-        f"db=pubmed&term={encoded_query}&retmax={retmax}&sort=pub+date&retmode=json"
-    )
-    with urllib.request.urlopen(url) as res:
-        data = json.loads(res.read().decode("utf-8"))
-        return data.get("esearchresult", {}).get("idlist", [])
+  <script>
+    let allPapers = [];
 
+    function renderFeatured(paper) {
+      const container = document.getElementById('featured-paper');
+      if (!paper) {
+        container.innerHTML = `<div class="card">아직 수집된 논문이 없습니다. GitHub Actions를 실행해 첫 논문을 가져와 주세요.</div>`;
+        return;
+      }
+      document.getElementById('today-date').textContent = paper.date;
 
-def fetch_candidates_details(pmids: list[str]) -> list[dict]:
-    if not pmids:
-        return []
-    ids_str = ",".join(pmids)
-    url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={ids_str}&retmode=xml"
-    with urllib.request.urlopen(url) as res:
-        xml_data = res.read()
+      const conceptsHtml = (paper.key_concepts && paper.key_concepts.length > 0)
+        ? `
+          <div class="concepts-box">
+            <h3>📖 함께 알아둘 핵심 의학 용어</h3>
+            ${paper.key_concepts.map(c => `
+              <div class="concept-item">
+                <div class="concept-term">• ${c.term}</div>
+                <div class="concept-desc">${c.explanation}</div>
+              </div>
+            `).join('')}
+          </div>
+        `
+        : '';
 
-    root = ET.fromstring(xml_data)
-    candidates = []
+      // 새 포맷(스토리텔링형)과 기존 포맷 모두 호환 렌더링
+      let bodyHtml = '';
+      if (paper.disease_background) {
+        const takeaways = Array.isArray(paper.study_takeaway)
+          ? `<ul class="takeaway-list">${paper.study_takeaway.map(t => `<li>${t}</li>`).join('')}</ul>`
+          : `<p>${paper.study_takeaway || ''}</p>`;
 
-    for article in root.findall(".//PubmedArticle"):
-        pmid = article.findtext(".//MedlineCitation/PMID", default="").strip()
-        title_elem = article.find(".//ArticleTitle")
-        title = "".join(title_elem.itertext()).strip() if title_elem is not None else ""
-        journal = article.findtext(".//Journal/Title", default="Unknown Journal")
+        bodyHtml = `
+          <div class="section"><h3>🩺 먼저 알아야 할 질환 이야기</h3><p>${paper.disease_background}</p></div>
+          <div class="section"><h3>🧬 핵심 타겟과 작용 원리</h3><p>${paper.key_mechanism}</p></div>
+          <div class="section"><h3>📌 이번 연구에서 확인된 핵심</h3>${takeaways}</div>
+          <div class="section"><h3>🏥 진료실 적용 포인트</h3><p>${paper.clinical_point}</p></div>
+        `;
+      } else {
+        bodyHtml = `
+          <div class="section"><h3>배경 및 목적</h3><p>${paper.background}</p></div>
+          <div class="section"><h3>연구 방법</h3><p>${paper.methods}</p></div>
+          <div class="section"><h3>핵심 결과</h3><p>${paper.results}</p></div>
+          <div class="section"><h3>임상적 의의 및 한계</h3><p>${paper.clinical_implication}</p></div>
+        `;
+      }
 
-        abstract_parts = []
-        for elem in article.findall(".//Abstract/AbstractText"):
-            label = elem.attrib.get("Label", "")
-            text = "".join(elem.itertext()).strip()
-            abstract_parts.append(f"{label}: {text}" if label else text)
-        abstract = "\n".join(abstract_parts)
-
-        # 초록이 너무 짧은 단신은 제외
-        if pmid and len(abstract) > 300:
-            candidates.append({
-                "pmid": pmid,
-                "title": title,
-                "journal": journal,
-                "abstract": abstract,
-                "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
-            })
-
-    return candidates
-
-
-def select_and_summarize(candidates: list[dict]) -> tuple[dict, dict]:
-    client = genai.Client()
-
-    candidates_text = ""
-    for idx, c in enumerate(candidates):
-        candidates_text += (
-            f"\n--- [후보 {idx}] ---\n"
-            f"저널: {c['journal']}\n"
-            f"제목: {c['title']}\n"
-            f"초록:\n{c['abstract']}\n"
-        )
-
-    prompt = f"""
-    당신은 임상의학 및 의과학 저널의 수석 에디터입니다.
-    아래 {len(candidates)}개의 최신 논문 후보 중 **임상적 중요도와 파급력이 가장 높은 핵심 연구 1편**을 고른 뒤, 매일 아침 깊이 있게 학습할 수 있도록 한국어로 브리핑을 작성해 주세요.
-
-    [선별 기준]
-    1. 대규모 무작위 대조시험(RCT), 진료 지침을 바꿀 수 있는 임상 연구, 핵심 병태생리/신약 기전을 규명한 연구를 최우선으로 선택하세요.
-    2. 지엽적인 증례나 단순 행정·정책 코멘트는 피하세요.
-
-    [후보 논문 목록]
-    {candidates_text}
-
-    반드시 아래 JSON 스키마로만 응답하세요:
-    {{
-      "selected_index": 선택한 후보의 번호 (0부터 {len(candidates) - 1} 사이의 정수),
-      "ko_title": "직관적이고 명확한 한국어 제목",
-      "category": "분과 1개 (예: 신경과, 순환기내과, 종양학, 감염내과, 내분비내과 등)",
-      "one_line": "이 연구가 왜 중요한지 한 줄 핵심 결론",
-      "background": "연구 배경 및 목적 (2~3문장)",
-      "methods": "연구 대상 및 방법 (핵심 수치 포함, 2~3문장)",
-      "results": "주요 결과 및 통계적 수치 (2~3문장)",
-      "clinical_implication": "임상적 의의 및 한계점 (2문장)",
-      "key_concepts": [
-        {{
-          "term": "순수 의학 개념 용어 (영어 원어 병기)",
-          "explanation": "질환의 병태생리(pathophysiology), 해부·생리학적 기전, 약물의 작용 기전(MOA), 또는 핵심 진단·임상 특징을 의학적으로 정확하고 깊이 있게 풀어쓴 설명 (3~4문장)"
-        }}
-      ]
-    }}
-
-    [중요 제약사항]
-    - key_concepts에는 **오직 순수 의학 개념(질환, 병태생리, 생리학, 약리 기전, 해부학, 바이오마커 등)만 3~4개** 작성하세요.
-    - 성향점수 매칭, 콕스 비례위험 모델, 메타분석, 위험비(HR), 신뢰구간 같은 **통계·역학·연구방법론 용어는 절대 포함하지 마세요.**
-    """
-
-    response = client.models.generate_content(
-        model="gemini-3.8-flash",
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            temperature=0.2,
-        ),
-    )
-    result = json.loads(response.text)
-    idx = result.pop("selected_index", 0)
-    if not (0 <= idx < len(candidates)):
-        idx = 0
-
-    return candidates[idx], result
-
-
-def main():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            papers = json.load(f)
-    else:
-        papers = []
-
-    existing_pmids = {p["pmid"] for p in papers}
-    recent_pmids = get_recent_pmids(PUBMED_QUERY, retmax=25)
-    unseen_pmids = [p for p in recent_pmids if p not in existing_pmids][:10]
-
-    candidates = fetch_candidates_details(unseen_pmids)
-    if not candidates:
-        print("새로운 후보 논문이 없습니다.")
-        return
-
-    chosen_article, summary = select_and_summarize(candidates)
-
-    new_entry = {
-        "date": datetime.now().strftime("%Y-%m-%d"),
-        "pmid": chosen_article["pmid"],
-        "original_title": chosen_article["title"],
-        "journal": chosen_article["journal"],
-        "url": chosen_article["url"],
-        **summary,
+      container.innerHTML = `
+        <article class="card">
+          <div class="badge-row">
+            <span class="badge">${paper.category}</span>
+            <span class="journal">${paper.journal}</span>
+          </div>
+          <h2 class="ko-title">${paper.ko_title}</h2>
+          <p class="en-title">${paper.original_title}</p>
+          <div class="one-line">💡 ${paper.one_line}</div>
+          ${bodyHtml}
+          ${conceptsHtml}
+          <a class="pubmed-link" href="${paper.url}" target="_blank" rel="noopener">PubMed 원문 보기 (PMID: ${paper.pmid}) →</a>
+        </article>
+      `;
     }
 
-    papers.insert(0, new_entry)
-    os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(papers, f, ensure_ascii=False, indent=2)
+    function renderArchive(papers) {
+      const list = document.getElementById('archive-list');
+      list.innerHTML = papers.map((p, idx) => `
+        <div class="archive-item" onclick="selectPaper(${idx})">
+          <div class="meta">${p.date} · ${p.category} · ${p.journal}</div>
+          <div class="title">${p.ko_title}</div>
+        </div>
+      `).join('');
+    }
 
-    print(f"선별 및 저장 완료: {new_entry['ko_title']} (PMID: {new_entry['pmid']})")
+    function selectPaper(index) {
+      renderFeatured(allPapers[index]);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 
+    document.getElementById('search-input').addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase();
+      const filtered = allPapers.filter(p =>
+        p.ko_title.toLowerCase().includes(q) ||
+        p.original_title.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
+        p.journal.toLowerCase().includes(q)
+      );
+      renderArchive(filtered);
+    });
 
-if __name__ == "__main__":
-    main()
+    fetch('./data/papers.json?t=' + Date.now())
+      .then(res => res.json())
+      .then(data => {
+        allPapers = data;
+        renderFeatured(allPapers[0]);
+        renderArchive(allPapers);
+      })
+      .catch(() => renderFeatured(null));
+  </script>
+</body>
+</html>
