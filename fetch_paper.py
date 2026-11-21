@@ -10,7 +10,7 @@ from google.genai import types
 # ==============================================================================
 # [필수 수정] 아래 두 줄만 본인의 ntfy 채널명과 개인 브리핑 웹사이트 주소로 바꾸세요!
 # ==============================================================================
-NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "haruachim_jun_0803")  # 예: haruachim_jun_9921
+NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "haruachim_jun_0803")
 SITE_URL = "https://juuunuuuu.github.io/up_to_date_medical/"
 # ==============================================================================
 
@@ -27,9 +27,8 @@ PUBMED_QUERY = (
     'NOT ("Letter"[pt] OR "Editorial"[pt] OR "Comment"[pt] OR "Published Erratum"[pt])'
 )
 
-OUTPUT_DIR = "output"
-HISTORY_FILE = "output/history.json"
-LATEST_FILE = "output/latest.json"
+DATA_DIR = "data"
+PAPERS_FILE = "data/papers.json"
 
 
 def get_recent_pmids(query: str, retmax: int = 30) -> list[str]:
@@ -158,19 +157,21 @@ def send_ntfy_notification(briefing: dict):
         with urllib.request.urlopen(req, timeout=15) as res:
             print(f"ntfy 알림 전송 완료: {res.status}")
     except Exception as e:
-        print(f"ntfy 알림 전송 실패 (웹페이지는 정상 업데이트됨): {e}")
+        print(f"ntfy 알림 전송 실패: {e}")
 
 
 def main():
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-            history = json.load(f)
+    os.makedirs(DATA_DIR, exist_ok=True)
+    if os.path.exists(PAPERS_FILE):
+        with open(PAPERS_FILE, "r", encoding="utf-8") as f:
+            raw = json.load(f)
+            existing_papers = raw if isinstance(raw, list) else [raw]
     else:
-        history = []
+        existing_papers = []
 
+    seen_pmids = {str(p.get("pmid")) for p in existing_papers if p.get("pmid")}
     recent_pmids = get_recent_pmids(PUBMED_QUERY, retmax=30)
-    unseen_pmids = [p for p in recent_pmids if p not in history][:12]
+    unseen_pmids = [p for p in recent_pmids if p not in seen_pmids][:12]
     candidates = fetch_candidates_details(unseen_pmids)
 
     if not candidates:
@@ -183,15 +184,12 @@ def main():
     briefing["journal"] = chosen["journal"]
     briefing["date"] = datetime.now().strftime("%Y-%m-%d")
 
-    history.append(chosen["pmid"])
-    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-        json.dump(history, f, ensure_ascii=False, indent=2)
-
-    with open(LATEST_FILE, "w", encoding="utf-8") as f:
-        json.dump(briefing, f, ensure_ascii=False, indent=2)
+    updated_papers = [briefing] + existing_papers[:29]
+    with open(PAPERS_FILE, "w", encoding="utf-8") as f:
+        json.dump(updated_papers, f, ensure_ascii=False, indent=2)
 
     send_ntfy_notification(briefing)
-    print(f"브리핑 생성 완료 [{briefing['specialty']}]: {briefing['headline']}")
+    print(f"브리핑 저장 완료 [{briefing['specialty']}]: {briefing['headline']}")
 
 
 if __name__ == "__main__":
