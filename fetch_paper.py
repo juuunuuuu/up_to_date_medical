@@ -7,22 +7,25 @@ from datetime import datetime
 from google import genai
 from google.genai import types
 
-# 신경학, 응급의학, 임상약리학 주요 저널 + 3대 종합저널 내 관련 주제 필터
+# 소화기학 · 순환기학 · 내분비학 주요 임상 연구 필터 (사설·코멘트 제외)
 PUBMED_QUERY = (
     '('
-    '("Lancet Neurology"[Journal] OR "JAMA Neurology"[Journal] OR "Neurology"[Journal] OR "Stroke"[Journal] OR '
-    '"Annals of Emergency Medicine"[Journal] OR "Resuscitation"[Journal] OR "Critical Care Medicine"[Journal] OR '
-    '"Clinical Pharmacology and Therapeutics"[Journal] OR "British Journal of Clinical Pharmacology"[Journal] OR "Drugs"[Journal]) '
-    'OR '
+    '("Gastroenterology"[Journal] OR "Gut"[Journal] OR "Hepatology"[Journal] OR "Gastroenterology"[MeSH Terms]) OR '
+    '("Circulation"[Journal] OR "European heart journal"[Journal] OR "Journal of the American College of Cardiology"[Journal] OR "Cardiology"[MeSH Terms]) OR '
+    '("Diabetes care"[Journal] OR "The lancet. Diabetes & endocrinology"[Journal] OR "Journal of clinical endocrinology and metabolism"[Journal] OR "Endocrinology"[MeSH Terms]) OR '
     '(("New England Journal of Medicine"[Journal] OR "Lancet"[Journal] OR "JAMA"[Journal]) AND '
-    '(neurology[tiab] OR neurological[tiab] OR stroke[tiab] OR migraine[tiab] OR epilepsy[tiab] OR dementia[tiab] OR '
-    'emergency[tiab] OR resuscitation[tiab] OR trauma[tiab] OR overdose[tiab] OR toxicology[tiab] OR sepsis[tiab] OR shock[tiab] OR '
-    'pharmacology[tiab] OR pharmacokinetics[tiab] OR pharmacodynamics[tiab] OR "drug interaction"[tiab] OR "adverse drug"[tiab]))'
+    '(gastroenterology[tiab] OR hepatology[tiab] OR cardiology[tiab] OR cardiovascular[tiab] OR heart failure[tiab] OR diabetes[tiab] OR endocrinology[tiab] OR metabolic[tiab]))'
     ') '
     'AND hasabstract[text] '
     'NOT ("Letter"[pt] OR "Editorial"[pt] OR "Comment"[pt] OR "Published Erratum"[pt])'
 )
-DATA_FILE = "data/papers.json"
+
+OUTPUT_DIR = "output"
+HISTORY_FILE = "output/history.json"
+LATEST_FILE = "output/latest.json"
+
+# GitHub Secrets에 NTFY_TOPIC을 등록해 두셨다면 자동으로 불러옵니다.
+NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "haruachim_med_personal")
 
 
 def get_recent_pmids(query: str, retmax: int = 30) -> list[str]:
@@ -31,7 +34,7 @@ def get_recent_pmids(query: str, retmax: int = 30) -> list[str]:
         f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?"
         f"db=pubmed&term={encoded_query}&retmax={retmax}&sort=pub+date&retmode=json"
     )
-    with urllib.request.urlopen(url) as res:
+    with urllib.request.urlopen(url, timeout=30) as res:
         data = json.loads(res.read().decode("utf-8"))
         return data.get("esearchresult", {}).get("idlist", [])
 
@@ -41,12 +44,11 @@ def fetch_candidates_details(pmids: list[str]) -> list[dict]:
         return []
     ids_str = ",".join(pmids)
     url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id={ids_str}&retmode=xml"
-    with urllib.request.urlopen(url) as res:
+    with urllib.request.urlopen(url, timeout=30) as res:
         xml_data = res.read()
 
     root = ET.fromstring(xml_data)
     candidates = []
-
     for article in root.findall(".//PubmedArticle"):
         pmid = article.findtext(".//MedlineCitation/PMID", default="").strip()
         title_elem = article.find(".//ArticleTitle")
@@ -60,75 +62,59 @@ def fetch_candidates_details(pmids: list[str]) -> list[dict]:
             abstract_parts.append(f"{label}: {text}" if label else text)
         abstract = "\n".join(abstract_parts)
 
-        if pmid and len(abstract) > 300:
+        if pmid and len(abstract) > 350:
             candidates.append({
                 "pmid": pmid,
                 "title": title,
                 "journal": journal,
                 "abstract": abstract,
-                "url": f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/",
             })
-
     return candidates
 
 
-def select_and_summarize(candidates: list[dict], recent_categories: list[str]) -> tuple[dict, dict]:
+def summarize_daily_paper(candidates: list[dict]) -> tuple[dict, dict]:
     client = genai.Client()
-
     candidates_text = ""
     for idx, c in enumerate(candidates):
-        candidates_text += (
-            f"\n--- [후보 {idx}] ---\n"
-            f"저널: {c['journal']}\n"
-            f"제목: {c['title']}\n"
-            f"초록:\n{c['abstract']}\n"
-        )
-
-    recent_info = ", ".join(recent_categories) if recent_categories else "없음"
+        candidates_text += f"\n--- [후보 {idx}] ---\n저널: {c['journal']}\n제목: {c['title']}\n초록:\n{c['abstract']}\n"
 
     prompt = f"""
-    당신은 후배에게 최신 임상 의학 지식을 쉽고 명쾌하게 설명해 주는 친절한 임상 멘토입니다.
-    현재 **[신경학, 응급의학, 임상약리학]** 세 과목을 집중 학습 중입니다.
-    아래 {len(candidates)}개의 최신 논문 후보 중 **이 세 분야와 가장 밀접하고 임상적으로 배울 점이 많은 핵심 연구 1편**을 고른 뒤, 딱딱한 논문 번역투가 아닌 **이야기하듯 술술 읽히는 임상 브리핑**을 작성해 주세요.
+    당신은 의대생·의료인을 위한 아침 의학 브리핑 에디터입니다.
+    아래 {len(candidates)}개의 최신 논문 후보 중 **소화기학, 순환기학, 내분비학** 세 과목에 해당하면서 임상적으로 가장 중요하고 흥미로운 연구 1편을 고르세요.
 
-    [선별 기준]
-    1. 반드시 **신경학, 응급의학, 임상약리학** 중 하나에 명확히 해당하는 연구를 선택하세요.
-    2. 최근 선정된 분야 기록: [{recent_info}] -> 가능하면 최근에 연달아 나온 분야보다 다른 분야가 골고루 섞이도록 우선순위를 두세요.
-    3. 대규모 임상시험, 진료 지침 변화, 핵심 약물 기전(PK/PD, 수용체 작용)이나 응급 처치 프로토콜을 다룬 연구를 우선하세요.
-
-    [작성 원칙 - 매우 중요]
-    1. **논문 초록 요약투 금지:** "1차 평가변수는 ~였다", "최소제곱평균 차이(97.5% CI, p=0.022)" 같은 딱딱한 연구 방법론과 복잡한 통계 수치는 과감히 빼세요.
-    2. **기초 개념부터 친절하게:**
-       - 신경학이면 핵심 신경해부·생리 및 질환 기전을,
-       - 응급의학이면 급성기 병태생리와 초기 처치의 핵심 원리를,
-       - 임상약리학이면 약물의 작용 기전(MOA), 약동학/약력학(PK/PD), 부작용 및 상호작용 원리를 배경지식이 없어도 이해할 수 있게 쉽게 설명해 주세요.
-    3. **가독성 최우선:** 한 문장을 길게 쓰지 말고, 핵심 결과는 짧은 불릿 포인트로 정리해 아침에 2분 만에 술술 읽히게 만드세요.
+    [작성 원칙]
+    - 연구 논문과 수필 사이의 담백하고 읽기 편한 어조로 작성하세요.
+    - 딱딱한 통계 나열("p<0.001로 유의하였다") 대신, 진료실에서 환자가 물어볼 법한 질문에서 시작해 기전과 임상적 의미를 이야기하듯 풀어주세요.
+    - 핵심 의학 용어는 한국어와 영어 원어를 함께 표기하세요.
 
     [후보 논문 목록]
     {candidates_text}
 
-    반드시 아래 JSON 스키마로만 응답하세요:
+    반드시 아래 JSON 형식으로만 응답하세요:
     {{
-      "selected_index": 선택한 후보의 번호 (0부터 {len(candidates) - 1} 사이의 정수),
-      "ko_title": "핵심 내용이 직관적으로 와닿는 흥미로운 한국어 제목",
-      "category": "신경학, 응급의학, 임상약리학 중 가장 적합한 1개만 정확히 기입",
-      "one_line": "이 연구가 왜 의미 있는지 한 줄로 쉽게 요약",
-      "disease_background": "1) 먼저 알아야 할 임상 배경: 이 연구가 다루는 질환이나 응급/약물 상황의 핵심 특징과 기존 치료의 현실적인 한계를 쉽게 설명 (3~4문장)",
-      "key_mechanism": "2) 핵심 타겟과 작용 원리: 이 논문에서 가장 중요한 병태생리 기전, 약물 작용 원리(MOA/PK/PD), 혹은 응급 처치의 의학적 원리를 알기 쉽게 풀어서 설명 (3~4문장)",
-      "study_takeaway": [
-        "연구 대상과 투여/치료 방식을 한 줄로 쉽게 요약",
-        "가장 핵심적인 치료 효과를 쉬운 수치로 요약 (복잡한 p값, 신뢰구간 제외)",
-        "부작용, 금기증 또는 안전성 측면을 한 줄로 요약"
+      "selected_index": 선택한 후보 번호 (0 ~ {len(candidates) - 1}),
+      "specialty": "소화기학" 또는 "순환기학" 또는 "내분비학",
+      "headline": "호기심을 자극하는 명쾌한 한국어 제목 (1~2줄)",
+      "one_line_takeaway": "핵심 결론 1줄 요약",
+      "clinical_context": "먼저 알아야 할 질환 이야기 (진료실 질문과 기존 치료의 한계, 4~5문장)",
+      "mechanism": "핵심 타겟과 작용 원리 (병태생리 및 약물 기전, 4~5문장)",
+      "key_findings": [
+        "연구 대상 및 규모 요약 1줄",
+        "핵심 임상 결과 수치 요약 1줄",
+        "실제 치료 전략에 주는 시사점 1줄"
       ],
-      "clinical_point": "진료실·응급실 적용 포인트: 실제 임상 현장에서 어떤 환자에게 어떻게 활용될 수 있을지 명쾌하게 정리 (2문장)",
-      "key_concepts": [
+      "clinical_pearl": "진료실 적용 포인트 (환자에게 어떻게 설명하고 적용할지 3~4문장)",
+      "key_terms": [
         {{
-          "term": "함께 알아두면 좋은 핵심 의학·약리 용어 (영어 원어 병기)",
-          "explanation": "교과서적인 딱딱한 정의 대신, 임상적 맥락에서 왜 중요한지 쉽게 풀어쓴 설명 (2~3문장)"
+          "term": "핵심 의학 용어 1 (영어 원어)",
+          "desc": "임상적 맥락을 담은 쉬운 설명 (2문장)"
+        }},
+        {{
+          "term": "핵심 의학 용어 2 (영어 원어)",
+          "desc": "임상적 맥락을 담은 쉬운 설명 (2문장)"
         }}
       ]
     }}
-    ※ key_concepts에는 질환/생리/약리/응급의학 등 순수 의학 개념만 2~3개 작성하고, 통계·연구방법론 용어는 절대 넣지 마세요.
     """
 
     response = client.models.generate_content(
@@ -136,52 +122,71 @@ def select_and_summarize(candidates: list[dict], recent_categories: list[str]) -
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
-            temperature=0.35,
+            temperature=0.4,
         ),
     )
     result = json.loads(response.text)
     idx = result.pop("selected_index", 0)
     if not (0 <= idx < len(candidates)):
         idx = 0
-
     return candidates[idx], result
 
 
-def main():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            papers = json.load(f)
-    else:
-        papers = []
+def send_ntfy_notification(briefing: dict):
+    if not NTFY_TOPIC:
+        return
+    url = f"https://ntfy.sh/{NTFY_TOPIC}"
+    title = f"[{briefing['specialty']}] 오늘의 아침 논문 브리핑"
+    message = f"{briefing['headline']}\n👉 {briefing['one_line_takeaway']}"
 
-    existing_pmids = {p["pmid"] for p in papers}
-    recent_categories = [p.get("category", "") for p in papers[:3]]
+    req = urllib.request.Request(
+        url,
+        data=message.encode("utf-8"),
+        headers={
+            "Title": title.encode("utf-8"),
+            "Priority": "default",
+            "Tags": "stethoscope,sunrise",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as res:
+            print(f"ntfy 알림 전송 완료: {res.status}")
+    except Exception as e:
+        print(f"ntfy 알림 전송 실패 (웹페이지는 정상 업데이트됨): {e}")
+
+
+def main():
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+            history = json.load(f)
+    else:
+        history = []
 
     recent_pmids = get_recent_pmids(PUBMED_QUERY, retmax=30)
-    unseen_pmids = [p for p in recent_pmids if p not in existing_pmids][:12]
-
+    unseen_pmids = [p for p in recent_pmids if p not in history][:12]
     candidates = fetch_candidates_details(unseen_pmids)
+
     if not candidates:
         print("새로운 후보 논문이 없습니다.")
         return
 
-    chosen_article, summary = select_and_summarize(candidates, recent_categories)
+    chosen, briefing = summarize_daily_paper(candidates)
+    briefing["pmid"] = chosen["pmid"]
+    briefing["original_title"] = chosen["title"]
+    briefing["journal"] = chosen["journal"]
+    briefing["date"] = datetime.now().strftime("%Y-%m-%d")
 
-    new_entry = {
-        "date": datetime.now().strftime("%Y-%m-%d"),
-        "pmid": chosen_article["pmid"],
-        "original_title": chosen_article["title"],
-        "journal": chosen_article["journal"],
-        "url": chosen_article["url"],
-        **summary,
-    }
+    history.append(chosen["pmid"])
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, indent=2)
 
-    papers.insert(0, new_entry)
-    os.makedirs(os.path.dirname(DATA_FILE), exist_ok=True)
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(papers, f, ensure_ascii=False, indent=2)
+    with open(LATEST_FILE, "w", encoding="utf-8") as f:
+        json.dump(briefing, f, ensure_ascii=False, indent=2)
 
-    print(f"선별 및 저장 완료: [{new_entry['category']}] {new_entry['ko_title']} (PMID: {new_entry['pmid']})")
+    send_ntfy_notification(briefing)
+    print(f"브리핑 생성 완료 [{briefing['specialty']}]: {briefing['headline']}")
 
 
 if __name__ == "__main__":
