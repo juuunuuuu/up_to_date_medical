@@ -7,6 +7,13 @@ from datetime import datetime
 from google import genai
 from google.genai import types
 
+# ==============================================================================
+# [필수 수정] 아래 두 줄만 본인의 ntfy 채널명과 개인 브리핑 웹사이트 주소로 바꾸세요!
+# ==============================================================================
+NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "haruachim_jun_0803")  # 예: haruachim_jun_9921
+SITE_URL = "https://juuunuuuu.github.io/up_to_date_medical/"
+# ==============================================================================
+
 # 소화기학 · 순환기학 · 내분비학 주요 임상 연구 필터 (사설·코멘트 제외)
 PUBMED_QUERY = (
     '('
@@ -23,9 +30,6 @@ PUBMED_QUERY = (
 OUTPUT_DIR = "output"
 HISTORY_FILE = "output/history.json"
 LATEST_FILE = "output/latest.json"
-
-# GitHub Secrets에 NTFY_TOPIC을 등록해 두셨다면 자동으로 불러옵니다.
-NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "haruachim_med_personal")
 
 
 def get_recent_pmids(query: str, retmax: int = 30) -> list[str]:
@@ -144,7 +148,8 @@ def send_ntfy_notification(briefing: dict):
         data=message.encode("utf-8"),
         headers={
             "Title": title.encode("utf-8"),
-            "Priority": "default",
+            "Click": SITE_URL.encode("utf-8"),
+            "Priority": "high",
             "Tags": "stethoscope,sunrise",
         },
         method="POST",
