@@ -2,230 +2,165 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="MedBrief" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Daily MedBrief</title>
   <style>
-    :root {
-      --bg: #f8f9fa;
-      --card: #ffffff;
-      --sub-card: #f1f5f9;
-      --text: #1e293b;
-      --muted: #64748b;
-      --accent: #0f766e;
-      --accent-soft: #f0fdfa;
-      --border: #e2e8f0;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg: #0f1115;
-        --card: #181b20;
-        --sub-card: #21262e;
-        --text: #e2e8f0;
-        --muted: #94a3b8;
-        --accent: #2dd4bf;
-        --accent-soft: #132a28;
-        --border: #2a2f38;
-      }
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.75;
+      margin: 0;
+      padding: 20px 16px 48px;
+      font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", sans-serif;
+      background: #f3f5f7;
+      color: #1e293b;
+      line-height: 1.65;
       word-break: keep-all;
-      padding: 24px 16px 64px;
     }
-    .container { max-width: 720px; margin: 0 auto; }
+    .wrap { max-width: 540px; margin: 0 auto; }
     header {
-      display: flex; justify-content: space-between; align-items: baseline;
-      margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding: 0 4px;
     }
-    header h1 { font-size: 1.35rem; font-weight: 700; letter-spacing: -0.02em; }
-    header span { font-size: 0.85rem; color: var(--muted); }
+    .brand { font-size: 1.25rem; font-weight: 800; color: #334155; letter-spacing: -0.02em; }
+    .date { font-size: 0.85rem; color: #64748b; font-weight: 600; }
     .card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 16px; padding: 26px 24px; margin-bottom: 24px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 24px 20px;
+      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
     }
-    .badge-row { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+    .meta-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
     .badge {
-      background: var(--accent-soft); color: var(--accent);
-      font-size: 0.78rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+      background: #e6f4ea;
+      color: #0f766e;
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 4px 11px;
+      border-radius: 999px;
     }
-    .journal { font-size: 0.82rem; color: var(--muted); font-weight: 500; }
-    .ko-title { font-size: 1.35rem; font-weight: 700; line-height: 1.4; margin-bottom: 6px; letter-spacing: -0.01em; }
-    .en-title { font-size: 0.85rem; color: var(--muted); margin-bottom: 18px; line-height: 1.45; }
-    .one-line {
-      background: var(--accent-soft); border-left: 4px solid var(--accent);
-      padding: 14px 16px; border-radius: 8px; font-weight: 600; font-size: 0.96rem;
+    .journal { font-size: 0.84rem; color: #64748b; font-weight: 600; }
+    h1 {
+      font-size: 1.32rem;
+      line-height: 1.42;
+      margin: 0 0 10px;
+      color: #0f172a;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .orig-title {
+      font-size: 0.82rem;
+      color: #64748b;
+      line-height: 1.45;
+      margin-bottom: 18px;
+    }
+    .takeaway {
+      background: #edf7f5;
+      border-radius: 14px;
+      padding: 15px 16px;
+      font-size: 0.94rem;
+      font-weight: 700;
+      color: #0f5149;
       margin-bottom: 24px;
     }
-    .section { margin-bottom: 22px; }
-    .section h3 {
-      font-size: 0.92rem; color: var(--accent); margin-bottom: 6px; font-weight: 700;
-      display: flex; align-items: center; gap: 6px;
+    h2 {
+      font-size: 1.02rem;
+      color: #0f766e;
+      margin: 24px 0 10px;
+      font-weight: 800;
     }
-    .section p { font-size: 0.96rem; }
-    .takeaway-list { padding-left: 18px; font-size: 0.96rem; }
-    .takeaway-list li { margin-bottom: 8px; }
-    .concepts-box {
+    p { margin: 0 0 12px; font-size: 0.95rem; color: #334155; }
+    ul { margin: 0; padding-left: 20px; }
+    li { margin-bottom: 10px; font-size: 0.94rem; color: #334155; }
+    .terms-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 18px 16px;
       margin-top: 24px;
-      padding: 18px;
-      background: var(--sub-card);
-      border-radius: 12px;
-      border: 1px solid var(--border);
     }
-    .concepts-box h3 {
-      font-size: 0.9rem;
-      color: var(--accent);
-      margin-bottom: 12px;
-      font-weight: 700;
-    }
-    .concept-item { margin-bottom: 14px; }
-    .concept-item:last-child { margin-bottom: 0; }
-    .concept-term { font-weight: 700; font-size: 0.93rem; margin-bottom: 3px; }
-    .concept-desc { font-size: 0.9rem; opacity: 0.92; line-height: 1.65; }
+    .terms-box h2 { margin-top: 0; margin-bottom: 14px; }
+    .term-item { margin-bottom: 14px; }
+    .term-item:last-child { margin-bottom: 0; }
+    .term-title { font-weight: 800; color: #0f172a; font-size: 0.94rem; margin-bottom: 4px; }
+    .term-desc { font-size: 0.9rem; color: #475569; margin: 0; }
     .pubmed-link {
-      display: inline-block; margin-top: 20px; font-size: 0.85rem;
-      color: var(--accent); text-decoration: none; font-weight: 600;
+      display: inline-block;
+      margin-top: 22px;
+      color: #0f766e;
+      font-weight: 700;
+      font-size: 0.9rem;
+      text-decoration: none;
     }
-    .archive-header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin: 32px 0 14px; gap: 12px;
-    }
-    .archive-header h2 { font-size: 1.05rem; }
-    input[type="search"] {
-      padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border);
-      background: var(--card); color: var(--text); font-size: 0.88rem; width: 200px;
-    }
-    .archive-item {
-      background: var(--card); border: 1px solid var(--border); border-radius: 12px;
-      padding: 14px 16px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.15s;
-    }
-    .archive-item:hover { border-color: var(--accent); }
-    .archive-item .meta { font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
-    .archive-item .title { font-size: 0.95rem; font-weight: 600; }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="wrap">
     <header>
-      <h1>Daily MedBrief</h1>
-      <span id="today-date"></span>
+      <div class="brand">Daily MedBrief</div>
+      <div class="date" id="date">불러오는 중...</div>
     </header>
-
-    <main id="featured-paper">
-      <div class="card">데이터를 불러오는 중입니다...</div>
+    <main class="card" id="content">
+      <p>최신 논문 브리핑을 불러오고 있습니다...</p>
     </main>
-
-    <div class="archive-header">
-      <h2>이전 브리핑 아카이브</h2>
-      <input type="search" id="search-input" placeholder="키워드·분과 검색..." />
-    </div>
-    <div id="archive-list"></div>
   </div>
 
   <script>
-    let allPapers = [];
-
-    function renderFeatured(paper) {
-      const container = document.getElementById('featured-paper');
-      if (!paper) {
-        container.innerHTML = `<div class="card">아직 수집된 논문이 없습니다. GitHub Actions를 실행해 첫 논문을 가져와 주세요.</div>`;
-        return;
-      }
-      document.getElementById('today-date').textContent = paper.date;
-
-      const conceptsHtml = (paper.key_concepts && paper.key_concepts.length > 0)
-        ? `
-          <div class="concepts-box">
-            <h3>📖 함께 알아둘 핵심 의학 용어</h3>
-            ${paper.key_concepts.map(c => `
-              <div class="concept-item">
-                <div class="concept-term">• ${c.term}</div>
-                <div class="concept-desc">${c.explanation}</div>
-              </div>
-            `).join('')}
-          </div>
-        `
-        : '';
-
-      // 새 포맷(스토리텔링형)과 기존 포맷 모두 호환 렌더링
-      let bodyHtml = '';
-      if (paper.disease_background) {
-        const takeaways = Array.isArray(paper.study_takeaway)
-          ? `<ul class="takeaway-list">${paper.study_takeaway.map(t => `<li>${t}</li>`).join('')}</ul>`
-          : `<p>${paper.study_takeaway || ''}</p>`;
-
-        bodyHtml = `
-          <div class="section"><h3>🩺 먼저 알아야 할 질환 이야기</h3><p>${paper.disease_background}</p></div>
-          <div class="section"><h3>🧬 핵심 타겟과 작용 원리</h3><p>${paper.key_mechanism}</p></div>
-          <div class="section"><h3>📌 이번 연구에서 확인된 핵심</h3>${takeaways}</div>
-          <div class="section"><h3>🏥 진료실 적용 포인트</h3><p>${paper.clinical_point}</p></div>
-        `;
-      } else {
-        bodyHtml = `
-          <div class="section"><h3>배경 및 목적</h3><p>${paper.background}</p></div>
-          <div class="section"><h3>연구 방법</h3><p>${paper.methods}</p></div>
-          <div class="section"><h3>핵심 결과</h3><p>${paper.results}</p></div>
-          <div class="section"><h3>임상적 의의 및 한계</h3><p>${paper.clinical_implication}</p></div>
-        `;
-      }
-
-      container.innerHTML = `
-        <article class="card">
-          <div class="badge-row">
-            <span class="badge">${paper.category}</span>
-            <span class="journal">${paper.journal}</span>
-          </div>
-          <h2 class="ko-title">${paper.ko_title}</h2>
-          <p class="en-title">${paper.original_title}</p>
-          <div class="one-line">💡 ${paper.one_line}</div>
-          ${bodyHtml}
-          ${conceptsHtml}
-          <a class="pubmed-link" href="${paper.url}" target="_blank" rel="noopener">PubMed 원문 보기 (PMID: ${paper.pmid}) →</a>
-        </article>
-      `;
-    }
-
-    function renderArchive(papers) {
-      const list = document.getElementById('archive-list');
-      list.innerHTML = papers.map((p, idx) => `
-        <div class="archive-item" onclick="selectPaper(${idx})">
-          <div class="meta">${p.date} · ${p.category} · ${p.journal}</div>
-          <div class="title">${p.ko_title}</div>
-        </div>
-      `).join('');
-    }
-
-    function selectPaper(index) {
-      renderFeatured(allPapers[index]);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    document.getElementById('search-input').addEventListener('input', (e) => {
-      const q = e.target.value.toLowerCase();
-      const filtered = allPapers.filter(p =>
-        p.ko_title.toLowerCase().includes(q) ||
-        p.original_title.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        p.journal.toLowerCase().includes(q)
-      );
-      renderArchive(filtered);
-    });
-
-    fetch('./data/papers.json?t=' + Date.now())
+    fetch(`./data/papers.json?t=${Date.now()}`)
       .then(res => res.json())
       .then(data => {
-        allPapers = data;
-        renderFeatured(allPapers[0]);
-        renderArchive(allPapers);
+        const p = Array.isArray(data) ? data[0] : data;
+        document.getElementById('date').textContent = p.date || '';
+
+        const findingsHtml = (p.key_findings || [])
+          .map(item => `<li>${item}</li>`)
+          .join('');
+
+        const termsHtml = (p.key_terms || [])
+          .map(t => `
+            <div class="term-item">
+              <div class="term-title">• ${t.term}</div>
+              <p class="term-desc">${t.desc}</p>
+            </div>
+          `)
+          .join('');
+
+        document.getElementById('content').innerHTML = `
+          <div class="meta-row">
+            <span class="badge">${p.specialty || p.category || '임상의학'}</span>
+            <span class="journal">${p.journal || ''}</span>
+          </div>
+          <h1>${p.headline || ''}</h1>
+          <div class="orig-title">${p.original_title || ''}</div>
+          <div class="takeaway">💡 ${p.one_line_takeaway || ''}</div>
+
+          <h2>🩺 먼저 알아야 할 질환 이야기</h2>
+          <p>${p.clinical_context || ''}</p>
+
+          <h2>🧬 핵심 타겟과 작용 원리</h2>
+          <p>${p.mechanism || ''}</p>
+
+          <h2>📌 이번 연구에서 확인된 핵심</h2>
+          <ul>${findingsHtml}</ul>
+
+          <h2>🏥 진료실 적용 포인트</h2>
+          <p>${p.clinical_pearl || ''}</p>
+
+          <div class="terms-box">
+            <h2>📖 함께 알아둘 핵심 의학 용어</h2>
+            ${termsHtml}
+          </div>
+
+          <a class="pubmed-link" href="https://pubmed.ncbi.nlm.nih.gov/${p.pmid}/" target="_blank">
+            PubMed 원문 보기 (PMID: ${p.pmid}) →
+          </a>
+        `;
       })
-      .catch(() => renderFeatured(null));
+      .catch(() => {
+        document.getElementById('content').innerHTML =
+          '<p>브리핑 데이터를 불러오지 못했습니다. GitHub Actions를 실행해 주세요.</p>';
+      });
   </script>
 </body>
 </html>
